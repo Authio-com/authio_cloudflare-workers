@@ -20,3 +20,7 @@ jobs:
         run: pnpm audit --audit-level=high
       - run: pnpm typecheck
       - run: pnpm build
+      # Unit + integration suite, executed inside REAL workerd via
+      # @cloudflare/vitest-pool-workers. Hermetic (mocked JWKS + in-test signing
+      # key), so it needs no network or live credentials and stays green.
+      - run: pnpm test

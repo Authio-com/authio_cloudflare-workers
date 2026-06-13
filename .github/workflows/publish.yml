@@ -36,7 +36,58 @@ permissions:
   id-token: write
 
 jobs:
+  # CONFORMANCE GATE — a RED conformance run blocks this version's publish.
+  #
+  # Before npm publish, dispatch the cross-repo conformance matrix in
+  # authio_e2e-tests (the headless SDK matrix + OpenAPI contract checks that
+  # exercise THIS published SDK against the LIVE services) and block the
+  # release if it concludes failure. `publish` `needs` this job, so a red
+  # matrix means no publish.
+  #
+  # INFRA-ABSENT, DON'T-BRICK-RELEASES DESIGN: the cross-repo dispatch needs a
+  # PAT with actions:read+write on authio_e2e-tests, stored as the org/repo
+  # secret CONFORMANCE_DISPATCH_TOKEN. When that secret is ABSENT (infra not
+  # yet wired) the gate emits a notice and PASSES, so releases aren't bricked
+  # before an operator wires it. Once present, the gate is enforced on every
+  # release. The conformance suite itself stays green when its own
+  # CONFORMANCE_* live secrets are absent (it skips, not fails), so the gate
+  # only ever goes RED on a genuine conformance regression.
+  conformance-gate:
+    name: Conformance gate (authio_e2e-tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a green conformance run before publishing
+        env:
+          GH_TOKEN: ${{ secrets.CONFORMANCE_DISPATCH_TOKEN }}
+          CONF_REPO: Authio-com/authio_e2e-tests
+          CONF_WORKFLOW: conformance.yml
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::notice::CONFORMANCE_DISPATCH_TOKEN absent — conformance gate skipped (infra not wired). Set it (a PAT with actions:read+write on ${CONF_REPO}) to enforce a green conformance run before publish."
+            exit 0
+          fi
+          echo "Dispatching conformance matrix on ${CONF_REPO} (${CONF_WORKFLOW})…"
+          before=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          gh workflow run "${CONF_WORKFLOW}" --repo "${CONF_REPO}" --ref main
+          run_id=""
+          for _ in $(seq 1 30); do
+            sleep 6
+            run_id=$(gh run list --repo "${CONF_REPO}" --workflow "${CONF_WORKFLOW}" \
+              --event workflow_dispatch --limit 1 \
+              --json databaseId,createdAt \
+              -q "[.[] | select(.createdAt >= \"${before}\")][0].databaseId" || true)
+            if [ -n "${run_id}" ] && [ "${run_id}" != "null" ]; then break; fi
+          done
+          if [ -z "${run_id}" ] || [ "${run_id}" = "null" ]; then
+            echo "::error::Could not locate the dispatched conformance run on ${CONF_REPO}."
+            exit 1
+          fi
+          echo "Watching conformance run ${run_id} (a red run blocks publish)…"
+          gh run watch "${run_id}" --repo "${CONF_REPO}" --exit-status
+
   publish:
+    needs: [conformance-gate]
     runs-on: ubuntu-latest
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
