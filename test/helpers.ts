@@ -76,10 +76,15 @@ export function mockJwks(jwks: { keys: JWK[] }): void {
     .persist();
 }
 
-/** Flip the last char of the signature segment to forge a tampered token. */
+/**
+ * Forge a tampered token whose signature decodes to DIFFERENT bytes.
+ * Mutating the FIRST signature char always changes byte 0; flipping the LAST
+ * char of a 64-byte EdDSA signature only touches padding bits, so it can
+ * decode to the identical signature and still verify.
+ */
 export function tamper(token: string): string {
   const parts = token.split(".");
   const sig = parts[2]!;
-  parts[2] = sig.slice(0, -1) + (sig.endsWith("A") ? "B" : "A");
+  parts[2] = (sig[0] === "A" ? "B" : "A") + sig.slice(1);
   return parts.join(".");
 }
