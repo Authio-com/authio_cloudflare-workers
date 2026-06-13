@@ -29,20 +29,28 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean --out-dir dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "jose": "^5.9.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20241112.0",
+    "@cloudflare/vitest-pool-workers": "0.8.71",
+    "@cloudflare/workers-types": "^4.20260613.1",
     "tsup": "^8.3.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "vitest": "~3.2.0"
   },
   "packageManager": "pnpm@10.12.1",
   "pnpm": {
     "overrides": {
       "esbuild": ">=0.28.1"
+    },
+    "auditConfig": {
+      "ignoreGhsas": [
+        "GHSA-36p8-mvp6-cv38"
+      ]
     }
   }
 }
