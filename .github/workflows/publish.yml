@@ -12,12 +12,7 @@ on:
 # `NODE_AUTH_TOKEN` reads `secrets.NPM_TOKEN`, which is expected to be a
 # single ORGANIZATION-level GitHub Actions secret shared by every
 # authio-com repo (Settings → Secrets and variables → Actions → New
-# organization secret). GitHub Actions cannot reference `secrets.*` inside
-# an `if:`, so the token is hoisted to job-level `env` and the publish step
-# is gated on `env.NPM_TOKEN != ''`. Build + test always run, so the
-# workflow stays GREEN even before the secret exists; only the publish step
-# skips. The same token publishes the FIRST (never-before-seen) version of a
-# package, as long as the token's scope covers the @useauthio org.
+# organization secret). Missing release credentials fail the workflow.
 #
 # `--provenance` attaches a signed build-provenance attestation for
 # supply-chain transparency (npm shows a verified "Built and signed on
@@ -44,14 +39,8 @@ jobs:
   # release if it concludes failure. `publish` `needs` this job, so a red
   # matrix means no publish.
   #
-  # INFRA-ABSENT, DON'T-BRICK-RELEASES DESIGN: the cross-repo dispatch needs a
-  # PAT with actions:read+write on authio_e2e-tests, stored as the org/repo
-  # secret CONFORMANCE_DISPATCH_TOKEN. When that secret is ABSENT (infra not
-  # yet wired) the gate emits a notice and PASSES, so releases aren't bricked
-  # before an operator wires it. Once present, the gate is enforced on every
-  # release. The conformance suite itself stays green when its own
-  # CONFORMANCE_* live secrets are absent (it skips, not fails), so the gate
-  # only ever goes RED on a genuine conformance regression.
+  # The cross-repo dispatch token and live conformance inputs are mandatory;
+  # inability to run the gate fails the release.
   conformance-gate:
     name: Conformance gate (authio_e2e-tests)
     runs-on: ubuntu-latest
