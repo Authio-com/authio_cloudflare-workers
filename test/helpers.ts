@@ -20,6 +20,8 @@ export interface Signer {
     actOrg?: string;
     actRole?: string;
     sid?: string;
+    /** The tenant claim auth-core stamps on every user token. */
+    projectId?: string;
     issuer?: string;
     audience?: string;
     expiresIn?: string;
@@ -47,6 +49,7 @@ export async function makeSigner(): Promise<Signer> {
         ...(opts.actOrg ? { act_org: opts.actOrg } : {}),
         ...(opts.actRole ? { act_role: opts.actRole } : {}),
         ...(opts.sid ? { sid: opts.sid } : {}),
+        ...(opts.projectId ? { project_id: opts.projectId } : {}),
       })
         .setProtectedHeader({ alg: opts.alg ?? "EdDSA", kid: KID })
         .setSubject(opts.sub ?? "user_123")
