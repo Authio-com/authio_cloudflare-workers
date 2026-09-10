@@ -256,6 +256,31 @@ describe("createForwardAuth: proxy mode", () => {
     expect(await res.text()).toBe("upstream says hi");
   });
 
+  it("rewrites the upstream origin when `upstream` is set (wrangler dev / internal host)", async () => {
+    const token = await signer.sign({ sub: "user_up", projectId: PROJECT });
+    fetchMock
+      .get("http://origin.internal:3000")
+      .intercept({ method: "GET", path: "/private?a=1" })
+      .reply(200, "internal origin");
+    const res = await fa({ upstream: "http://origin.internal:3000" }).fetch(
+      new Request(`${APP}/private?a=1`, {
+        headers: { cookie: `authio_session=${token}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("internal origin");
+  });
+
+  it("drops the Secure attribute when secureCookies is false", async () => {
+    const res = await fa({ secureCookies: false }).fetch(
+      new Request(`${APP}/page`, { headers: { accept: "text/html" } }),
+    );
+    const cookie = getCookies(res).find((c) => c.startsWith("authio_fa_nonce="));
+    expect(cookie).toBeDefined();
+    expect(cookie).not.toContain("Secure");
+    expect(cookie).toContain("HttpOnly");
+  });
+
   it("lets publicPaths through without a session", async () => {
     fetchMock
       .get(APP)

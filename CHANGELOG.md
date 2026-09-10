@@ -4,6 +4,14 @@ All notable changes to `@useauthio/cloudflare-workers` are documented here. This
 project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-09-10
+
+### Added
+
+- `upstream` (proxy-mode origin override — internal hostnames, `wrangler dev`)
+  and `secureCookies: false` (plain-HTTP local dev) options on
+  `createForwardAuth`.
+
 ## [0.3.0] — 2026-09-10
 
 ### Added

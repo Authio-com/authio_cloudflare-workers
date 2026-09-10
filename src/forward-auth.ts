@@ -60,6 +60,20 @@ export interface ForwardAuthOptions extends AuthioWorkerOptions {
    * should simply not send those routes here.
    */
   publicPaths?: string[];
+  /**
+   * Proxy-mode upstream origin override, e.g. `http://10.0.0.7:3000`.
+   * By default the worker fetches the incoming URL unchanged (the
+   * Cloudflare-route deployment, where that reaches the zone origin).
+   * Set this when the app lives on a different hostname — including
+   * `wrangler dev`, where same-URL fetches would loop back into the
+   * worker itself.
+   */
+  upstream?: string;
+  /**
+   * Mark cookies `Secure` (default true). Turn off only for plain-HTTP
+   * local development.
+   */
+  secureCookies?: boolean;
   /** Refresh-cookie Max-Age in seconds. Default 30 days. */
   refreshCookieMaxAge?: number;
   /** Upstream identity header names. */
@@ -107,6 +121,8 @@ export function createForwardAuth(opts: ForwardAuthOptions): ForwardAuth {
   const refreshMaxAge = opts.refreshCookieMaxAge ?? DEFAULT_REFRESH_MAX_AGE;
   const denylistPrefix = opts.denylistPrefix ?? DEFAULT_DENYLIST_PREFIX;
   const denylistTtl = opts.denylistTtlSeconds ?? DEFAULT_DENYLIST_TTL_SECONDS;
+  const upstream = opts.upstream?.replace(/\/$/, "");
+  const secureAttr = opts.secureCookies === false ? "" : " Secure;";
 
   function apiHeaders(): Record<string, string> {
     return { "content-type": "application/json", ...(opts.apiHeaders ?? {}) };
@@ -148,14 +164,14 @@ export function createForwardAuth(opts: ForwardAuthOptions): ForwardAuth {
   ): void {
     headers.append(
       "Set-Cookie",
-      `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`,
+      `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly;${secureAttr} SameSite=Lax; Max-Age=${maxAge}`,
     );
   }
 
   function clearCookie(headers: Headers, name: string): void {
     headers.append(
       "Set-Cookie",
-      `${name}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
+      `${name}=; Path=/; HttpOnly;${secureAttr} SameSite=Lax; Max-Age=0`,
     );
   }
 
@@ -344,11 +360,15 @@ export function createForwardAuth(opts: ForwardAuthOptions): ForwardAuth {
       return new Response(null, { status: 200, headers });
     }
 
-    const upstream = new Request(req);
-    upstream.headers.set(userIdHeader, session.userId);
-    if (session.orgId) upstream.headers.set(orgIdHeader, session.orgId);
-    else upstream.headers.delete(orgIdHeader);
-    const res = await fetch(upstream);
+    const inUrl = new URL(req.url);
+    const target = upstream
+      ? `${upstream}${inUrl.pathname}${inUrl.search}`
+      : req.url;
+    const upstreamReq = new Request(target, req);
+    upstreamReq.headers.set(userIdHeader, session.userId);
+    if (session.orgId) upstreamReq.headers.set(orgIdHeader, session.orgId);
+    else upstreamReq.headers.delete(orgIdHeader);
+    const res = await fetch(upstreamReq);
     if (!freshEnvelope) return res;
     const withCookies = new Response(res.body, res);
     mint(withCookies.headers);
@@ -367,7 +387,9 @@ export function createForwardAuth(opts: ForwardAuthOptions): ForwardAuth {
       mode === "proxy" &&
       (opts.publicPaths ?? []).some((p) => path.startsWith(p))
     ) {
-      return fetch(request);
+      if (!upstream) return fetch(request);
+      const u = new URL(request.url);
+      return fetch(new Request(`${upstream}${u.pathname}${u.search}`, request));
     }
 
     let session = await worker.verifyRequest(request);

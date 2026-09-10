@@ -7,7 +7,7 @@
     "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@useauthio/cloudflare-workers": "^0.3.0"
+    "@useauthio/cloudflare-workers": "^0.3.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260613.1",
