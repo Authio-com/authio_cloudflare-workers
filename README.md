@@ -38,6 +38,29 @@ export default {
 };
 ```
 
+## Forward-auth (protect any app, no SDK inside it)
+
+`createForwardAuth` turns a Worker into the auth layer in front of an
+app: Lobby redirect → session-handoff exchange → HttpOnly cookies →
+`X-Authio-User-Id` / `X-Authio-Org-Id` headers upstream, with silent
+refresh and an optional KV denylist fed by the `session.revoked`
+webhook.
+
+```ts
+import { createForwardAuth } from "@useauthio/cloudflare-workers";
+
+const auth = createForwardAuth({
+  apiUrl: "https://identity.authio.com",
+  projectId: "proj_...",
+  // mode: "endpoint" for Traefik forwardAuth / nginx auth_request
+});
+
+export default { fetch: (req: Request) => auth.fetch(req) };
+```
+
+A deployable wrangler project lives in
+[`template/`](https://github.com/Authio-com/authio_cloudflare-workers/tree/main/template).
+
 ## License
 
 MIT

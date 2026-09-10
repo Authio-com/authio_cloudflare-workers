@@ -1,0 +1,36 @@
+# Authio forward-auth worker.
+#
+# Proxy mode: uncomment `routes` so the worker fronts your app. The
+# worker's fetch() to the same hostname then falls through to your
+# origin server.
+#
+# Endpoint mode: set AUTHIO_MODE = "endpoint", deploy on workers.dev or
+# any hostname, and point Traefik forwardAuth / nginx auth_request at it.
+
+name = "authio-forward-auth"
+main = "src/worker.ts"
+compatibility_date = "2024-11-12"
+
+# routes = [
+#   { pattern = "app.example.com/*", zone_name = "example.com" }
+# ]
+
+[vars]
+AUTHIO_API_URL = "https://identity.authio.com"
+AUTHIO_PROJECT_ID = "proj_..."
+# AUTHIO_MODE = "endpoint"
+# AUTHIO_PUBLIC_PATHS = "/healthz,/public"
+
+# Optional: revoked-session denylist fed by Authio's session.revoked
+# webhook. Create the namespace (`wrangler kv namespace create DENYLIST`),
+# then set the webhook secret: `wrangler secret put AUTHIO_WEBHOOK_SECRET`
+# and register https://app.example.com/__authio/webhook in the dashboard
+# (or via `authio apply`).
+# [[kv_namespaces]]
+# binding = "AUTHIO_DENYLIST"
+# id = "..."
+
+# Optional but recommended: JWKS cache.
+# [[kv_namespaces]]
+# binding = "AUTHIO_JWKS_CACHE"
+# id = "..."

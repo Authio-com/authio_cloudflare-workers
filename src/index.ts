@@ -173,3 +173,9 @@ function readCookie(header: string, name: string): string | null {
   }
   return null;
 }
+
+export {
+  createForwardAuth,
+  type ForwardAuth,
+  type ForwardAuthOptions,
+} from "./forward-auth";

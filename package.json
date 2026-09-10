@@ -1,6 +1,6 @@
 {
   "name": "@useauthio/cloudflare-workers",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Authio session verification for Cloudflare Workers, with JWKS caching in CF KV.",
   "license": "MIT",
   "author": "Authio",
