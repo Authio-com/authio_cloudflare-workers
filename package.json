@@ -40,7 +40,7 @@
     "@cloudflare/workers-types": "^4.20260613.1",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
-    "vitest": "~3.2.0"
+    "vitest": "~4.1.11"
   },
   "packageManager": "pnpm@10.12.1",
   "pnpm": {
