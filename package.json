@@ -36,11 +36,13 @@
     "jose": "^5.9.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.12.21",
+    "@cloudflare/vitest-pool-workers": "0.22.0",
     "@cloudflare/workers-types": "^4.20260613.1",
+    "@vitest/runner": "^4.1.11",
+    "@vitest/snapshot": "^4.1.11",
     "tsup": "^8.3.0",
     "typescript": "^5.6.0",
-    "vitest": "~3.2.0"
+    "vitest": "~4.1.11"
   },
   "packageManager": "pnpm@10.12.1",
   "pnpm": {
