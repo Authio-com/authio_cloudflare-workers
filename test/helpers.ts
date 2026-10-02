@@ -1,10 +1,10 @@
 /**
  * Hermetic test fixtures: a generated Ed25519 signing key, a JWKS document
- * served via the runtime's fetchMock, and a token minter that mirrors the
+ * served via a stubbed global fetch, and a token minter that mirrors the
  * shape auth-core signs (EdDSA, `kid`, sub/act_org/act_role/sid claims).
  */
 
-import { fetchMock } from "cloudflare:test";
+import { vi } from "vitest";
 import { SignJWT, exportJWK, generateKeyPair, type JWK } from "jose";
 
 export const API_URL = "https://auth.test";
@@ -65,18 +65,19 @@ export async function makeSigner(): Promise<Signer> {
 
 /**
  * Intercept the JWKS fetch the SDK makes from inside workerd and reply with
- * `jwks`. `.persist()` so the (cached) remote-JWKS set may refetch freely.
+ * `jwks`. Every call is answered so the (cached) remote-JWKS set may refetch
+ * freely; any other outbound request fails, keeping the suite off the network.
  */
 export function mockJwks(jwks: { keys: JWK[] }): void {
-  fetchMock.activate();
-  fetchMock.disableNetConnect();
-  fetchMock
-    .get(API_URL)
-    .intercept({ path: JWKS_PATH })
-    .reply(200, JSON.stringify(jwks), {
+  const jwksUrl = new URL(JWKS_PATH, API_URL).href;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (url !== jwksUrl) throw new Error(`unexpected outbound fetch: ${url}`);
+    return new Response(JSON.stringify(jwks), {
+      status: 200,
       headers: { "content-type": "application/json" },
-    })
-    .persist();
+    });
+  });
 }
 
 /**

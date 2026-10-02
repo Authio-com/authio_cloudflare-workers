@@ -2,7 +2,7 @@
  * Integration tests — full verify path inside workerd against a mocked JWKS.
  *
  * Signs real EdDSA tokens with a generated key, serves the matching JWKS via
- * the runtime's fetchMock, and drives @useauthio/cloudflare-workers exactly as
+ * a stubbed global fetch, and drives @useauthio/cloudflare-workers exactly as
  * a deployed Worker would: valid tokens resolve to a typed session; tamper,
  * expiry, wrong-issuer, and wrong-audience are rejected (null). Proves the SDK
  * works on its target runtime with no network and no live credentials.
