@@ -92,13 +92,16 @@ describe("AuthioWorker tenant binding", () => {
     expect(session?.userId).toBe("user_real");
   });
 
-  it("warns but accepts a token with no project_id claim", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("rejects a token with no project_id claim when projectId is configured", async () => {
     const token = await signer.sign({ sub: "user_legacy", sid: "s1" });
-    const session = await worker("proj_victim").verify(token);
-    expect(session?.userId).toBe("user_legacy");
-    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/no project_id claim/));
-    warn.mockRestore();
+    expect(await worker("proj_victim").verify(token)).toBeNull();
+  });
+
+  it("does not throw on a malformed percent-encoded cookie", async () => {
+    const req = new Request("https://app.test/", {
+      headers: { cookie: "authio_session=%E0%A4%A" },
+    });
+    expect(await worker("proj_victim").verifyRequest(req)).toBeNull();
   });
 
   it("does not reject when no projectId is configured", async () => {

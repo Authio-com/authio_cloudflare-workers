@@ -72,7 +72,6 @@ export class AuthioWorker {
   private readonly issuer: string;
   private readonly audience: string;
   private warnedNoProjectConfigured = false;
-  private warnedClaimAbsent = false;
 
   constructor(private readonly opts: AuthioWorkerOptions) {
     if (!opts.apiUrl) throw new Error("AuthioWorker: apiUrl is required");
@@ -122,11 +121,8 @@ export class AuthioWorker {
    * token belongs to another project, which is exactly the
    * cross-tenant forgery this guards against.
    *
-   * An ABSENT claim only warns. auth-core has only just started
-   * stamping project_id on user tokens and sessions issued before
-   * that are still valid until they expire; rejecting them would sign
-   * real users out to defend against a token that can no longer be
-   * minted. A later release turns absence into a rejection.
+   * An ABSENT claim is also rejected when a projectId is configured:
+   * a token that cannot be tied to the tenant must not be accepted.
    */
   private tenantOk(claims: AuthioJwt): boolean {
     if (!this.opts.projectId) {
@@ -139,16 +135,7 @@ export class AuthioWorker {
       }
       return true;
     }
-    if (typeof claims.project_id !== "string") {
-      if (!this.warnedClaimAbsent) {
-        this.warnedClaimAbsent = true;
-        console.warn(
-          "authio: token carries no project_id claim, so it could not be checked against your tenant. " +
-            "Expected for sessions issued before 2026-07; a future release will reject these.",
-        );
-      }
-      return true;
-    }
+    if (typeof claims.project_id !== "string") return false;
     return claims.project_id === this.opts.projectId;
   }
 
@@ -169,7 +156,15 @@ function readCookie(header: string, name: string): string | null {
     const eq = part.indexOf("=");
     if (eq < 0) continue;
     if (part.slice(0, eq).trim() === name)
-      return decodeURIComponent(part.slice(eq + 1).trim());
+      return safeDecode(part.slice(eq + 1).trim());
   }
   return null;
+}
+
+function safeDecode(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null; // malformed percent-encoding: treat as no cookie, never throw
+  }
 }

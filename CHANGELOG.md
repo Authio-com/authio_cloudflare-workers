@@ -4,6 +4,14 @@ All notable changes to `@useauthio/cloudflare-workers` are documented here. This
 project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- When `projectId` is configured, a token with no `project_id` claim is now
+  rejected (previously accepted with a warning). Matches `@useauthio/node`.
+- Malformed percent-encoding in the `authio_session` cookie no longer throws;
+  the cookie is ignored.
+
 ## [0.2.0] — 2026-06-12
 
 ### Changed
